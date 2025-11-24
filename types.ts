@@ -14,6 +14,13 @@ export interface Attachment {
   data: string; // Base64
 }
 
+export interface TripDocument {
+  id: string;
+  title: string;
+  isChecked: boolean;
+  image?: string; // Base64 compressed image
+}
+
 export interface Activity {
   id: string;
   time: string; // HH:mm
@@ -64,6 +71,7 @@ export interface Trip {
   days: DayItinerary[];
   currencies: CurrencyConfig[];
   expenses: Expense[];
+  documents: TripDocument[]; // New field for documents
   notes: string; // Important notes on home screen
 }
 

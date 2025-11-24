@@ -11,10 +11,29 @@ export const mockLogin = async (): Promise<User> => {
   await new Promise(resolve => setTimeout(resolve, 800));
   
   const mockUser: User = {
-    uid: 'user_12345',
-    displayName: 'Viajante',
-    email: 'viajante@exemplo.com',
+    uid: 'user_google_123',
+    displayName: 'Viajante Google',
+    email: 'viajante@gmail.com',
     photoURL: 'https://picsum.photos/100/100'
+  };
+  
+  localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mockUser));
+  return mockUser;
+};
+
+export const mockEmailLogin = async (email: string, password: string): Promise<User> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  const name = email.split('@')[0];
+  const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+  
+  const mockUser: User = {
+    uid: `user_email_${Date.now()}`,
+    displayName: displayName,
+    email: email,
+    // Generate an avatar based on name initials using a public API
+    photoURL: `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff`
   };
   
   localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mockUser));
@@ -41,6 +60,7 @@ export const getTrips = async (): Promise<Trip[]> => {
       budgetBRL: t.budgetBRL || 5000,
       currencies: t.currencies || [{ code: 'USD', rateToBRL: 5.0 }],
       expenses: t.expenses || [],
+      documents: t.documents || [],
       notes: t.notes || ''
     }));
   }

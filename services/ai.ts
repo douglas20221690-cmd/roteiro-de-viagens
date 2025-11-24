@@ -74,6 +74,7 @@ export const generateItinerary = async (destination: string, days: number, budge
     budgetBRL: 0, // Placeholder
     currencies: [{ code: 'USD', rateToBRL: 5.5 }], // Default currency
     expenses: [],
+    documents: [],
     notes: `Generated itinerary for ${destination} (${budget} budget). Interests: ${interests}`,
     days: data.days.map((d: any) => ({
       ...d,

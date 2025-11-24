@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { Button } from './components/Button';
 import { TripCard } from './components/TripCard';
-import { Trip, User, ViewState, Activity, DayItinerary, ActivityType, CurrencyConfig, Expense, Attachment } from './types';
+import { Trip, User, ViewState, Activity, DayItinerary, ActivityType, CurrencyConfig, Expense, Attachment, TripDocument } from './types';
 import * as storageService from './services/storage';
-import { MapPin, Calendar, DollarSign, Plus, Clock, Map, Utensils, Bed, Camera, ArrowLeft, Trash2, Edit2, Plane, Train, Bus, FileText, PieChart, Image as ImageIcon, X, Save, Upload, Banknote, Settings, GraduationCap, Timer, AlertTriangle, ExternalLink, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Plus, Clock, Map, Utensils, Bed, Camera, ArrowLeft, Trash2, Edit2, Plane, Train, Bus, FileText, PieChart, Image as ImageIcon, X, Save, Upload, Banknote, Settings, GraduationCap, Timer, AlertTriangle, ExternalLink, ChevronRight, CheckSquare, FolderOpen, Eye, Mail, Lock, RefreshCw } from 'lucide-react';
 
 // --- Utils ---
 
@@ -95,36 +95,112 @@ const ConfirmModal = ({
   );
 };
 
-const LoginView = ({ onLogin, loading }: { onLogin: () => void; loading: boolean }) => (
-  <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white">
-    <div className="w-full max-w-sm text-center">
-      <div className="mb-8 relative inline-block">
-         <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-green-400 rounded-full blur opacity-30 animate-pulse"></div>
-         <div className="relative bg-white p-4 rounded-full shadow-xl">
-            <Plane className="text-blue-600 w-12 h-12" />
-         </div>
+const ImageViewerModal = ({ src, onClose }: { src: string | null; onClose: () => void }) => {
+  if (!src) return null;
+  return (
+    <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute top-4 right-4">
+        <button onClick={onClose} className="text-white bg-white/20 p-2 rounded-full backdrop-blur-md">
+          <X size={24} />
+        </button>
       </div>
-      <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">Gerenciador de Viagens</h1>
-      <p className="text-slate-500 mb-10">Planeje, gerencie e controle seus gastos.</p>
-      
-      <Button 
-        onClick={onLogin} 
-        isLoading={loading}
-        className="w-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
-        icon={
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-          </svg>
-        }
-      >
-        Entrar com Google
-      </Button>
+      <img src={src} alt="Full view" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
     </div>
-  </div>
-);
+  );
+};
+
+const LoginView = ({ 
+  onGoogleLogin, 
+  onEmailLogin,
+  loading 
+}: { 
+  onGoogleLogin: () => void; 
+  onEmailLogin: (e: string, p: string) => void;
+  loading: boolean 
+}) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if(email && password) {
+      onEmailLogin(email, password);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-white font-sans">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-10">
+          <div className="mb-8 relative inline-block">
+             <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-green-400 rounded-full blur opacity-30 animate-pulse"></div>
+             <div className="relative bg-white p-4 rounded-full shadow-xl">
+                <Plane className="text-blue-600 w-12 h-12" />
+             </div>
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">Gerenciador de Viagens</h1>
+          <p className="text-slate-500">Planeje, gerencie e controle seus gastos.</p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+          <div className="relative">
+            <Mail className="absolute left-4 top-3.5 text-slate-400" size={20} />
+            <input 
+              type="email" 
+              placeholder="E-mail" 
+              className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-4 top-3.5 text-slate-400" size={20} />
+            <input 
+              type="password" 
+              placeholder="Senha" 
+              className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400 font-medium"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <Button 
+            type="submit"
+            isLoading={loading} 
+            className="w-full py-3.5 shadow-lg shadow-blue-100"
+          >
+            Entrar
+          </Button>
+        </form>
+
+        <div className="relative flex py-2 items-center mb-8">
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-semibold uppercase">Ou continue com</span>
+          <div className="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <Button 
+          type="button"
+          onClick={onGoogleLogin} 
+          isLoading={loading}
+          variant="outline"
+          className="w-full bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          icon={
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+          }
+        >
+          Entrar com Google
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const TripFormView = ({ 
   onCancel, 
@@ -140,6 +216,8 @@ const TripFormView = ({
   const [endDate, setEndDate] = useState(initialTrip?.endDate || '');
   const [cities, setCities] = useState(initialTrip?.cities.join(', ') || '');
   const [budgetBRL, setBudgetBRL] = useState(initialTrip?.budgetBRL.toString() || '5000');
+  const [coverImage, setCoverImage] = useState<string | undefined>(initialTrip?.coverImage);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   
   const [currencies, setCurrencies] = useState<CurrencyConfig[]>(
     initialTrip?.currencies || [{ code: 'USD', rateToBRL: 5.50 }]
@@ -157,6 +235,13 @@ const TripFormView = ({
 
   const removeCurrency = (index: number) => {
     setCurrencies(currencies.filter((_, i) => i !== index));
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const data = await compressImage(e.target.files[0]);
+      setCoverImage(data);
+    }
   };
 
   const handleSaveInternal = () => {
@@ -202,22 +287,65 @@ const TripFormView = ({
       currencies,
       days: newDays,
       expenses: initialTrip?.expenses || [],
-      notes: initialTrip?.notes || ''
+      documents: initialTrip?.documents || [],
+      notes: initialTrip?.notes || '',
+      coverImage: coverImage
     };
 
     onSave(trip);
   };
 
+  const displayImage = coverImage || `https://picsum.photos/seed/${destination || 'trip'}/800/400`;
+
   return (
-    <div className="p-6 bg-white min-h-screen">
-      <div className="flex items-center mb-8">
-        <button onClick={onCancel} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
-          <ArrowLeft size={24} className="text-slate-800" />
-        </button>
-        <h2 className="text-2xl font-bold ml-2 text-slate-900">{initialTrip ? 'Editar Viagem' : 'Nova Viagem'}</h2>
+    <div className="bg-white min-h-screen">
+      <div className="p-6">
+        <div className="flex items-center mb-6">
+          <button onClick={onCancel} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
+            <ArrowLeft size={24} className="text-slate-800" />
+          </button>
+          <h2 className="text-2xl font-bold ml-2 text-slate-900">{initialTrip ? 'Editar Viagem' : 'Nova Viagem'}</h2>
+        </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="px-6 pb-20 space-y-6">
+        {/* Cover Image Editor */}
+        <div className="relative w-full h-48 rounded-2xl overflow-hidden group shadow-md bg-slate-100">
+           <img src={displayImage} alt="Capa" className="w-full h-full object-cover transition-all group-hover:scale-105" />
+           <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors" />
+           
+           <div className="absolute inset-0 flex items-center justify-center gap-4">
+             <button 
+               onClick={() => imageInputRef.current?.click()}
+               className="bg-white/90 hover:bg-white text-slate-800 px-4 py-2 rounded-xl text-sm font-bold flex items-center backdrop-blur-sm transition-all"
+             >
+               <Camera size={18} className="mr-2" />
+               {coverImage ? 'Trocar Foto' : 'Adicionar Foto'}
+             </button>
+             
+             {coverImage && (
+               <button 
+                 onClick={() => setCoverImage(undefined)}
+                 className="bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-xl backdrop-blur-sm transition-all"
+                 title="Restaurar padrão"
+               >
+                 <Trash2 size={18} />
+               </button>
+             )}
+           </div>
+           
+           <input 
+             type="file" 
+             ref={imageInputRef} 
+             className="hidden" 
+             accept="image/*" 
+             onChange={handleImageChange}
+           />
+           <div className="absolute bottom-3 left-4 text-white text-xs font-medium bg-black/40 px-2 py-1 rounded-md">
+             Capa da Viagem
+           </div>
+        </div>
+
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">Destino Principal</label>
           <input 
@@ -319,6 +447,104 @@ const TripFormView = ({
           >
             {initialTrip ? 'Salvar Alterações' : 'Criar Viagem'}
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DocumentModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialDocument
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (doc: TripDocument) => void;
+  initialDocument?: TripDocument;
+}) => {
+  const [title, setTitle] = useState('');
+  const [image, setImage] = useState<string | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTitle(initialDocument?.title || '');
+      setImage(initialDocument?.image || undefined);
+    }
+  }, [isOpen, initialDocument]);
+
+  if (!isOpen) return null;
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const data = await compressImage(file);
+      setImage(data);
+    }
+  };
+
+  const handleSave = () => {
+    if (!title) return;
+    const doc: TripDocument = {
+      id: initialDocument?.id || Date.now().toString(),
+      title,
+      isChecked: initialDocument?.isChecked || false,
+      image
+    };
+    onSave(doc);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+        <h3 className="font-bold text-xl mb-6 text-slate-900">{initialDocument ? 'Editar Documento' : 'Novo Documento'}</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Nome do Documento</label>
+            <input 
+              type="text" 
+              className="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+              placeholder="Ex: Passaporte, Seguro, Visto" 
+              value={title} 
+              onChange={e => setTitle(e.target.value)} 
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Foto / Anexo</label>
+            {image ? (
+              <div className="relative">
+                <img src={image} alt="Preview" className="w-full h-40 object-cover rounded-2xl border border-slate-200" />
+                <button 
+                  onClick={() => setImage(undefined)} 
+                  className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full h-32 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all"
+              >
+                <Camera size={24} className="mb-2" />
+                <span className="text-sm font-medium">Tirar Foto ou Escolher</span>
+              </button>
+            )}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleFileChange}
+            />
+          </div>
+
+          <Button onClick={handleSave} className="w-full py-3.5 mt-2">Salvar</Button>
+          <button onClick={onClose} className="w-full py-3 text-slate-500 font-medium hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
         </div>
       </div>
     </div>
@@ -597,7 +823,7 @@ const TripDetailView = ({
   onEditTrip: () => void;
 }) => {
   const [trip, setTrip] = useState(initialTrip);
-  const [activeTab, setActiveTab] = useState<'ROTEIRO' | 'GASTOS' | 'INFO'>('INFO');
+  const [activeTab, setActiveTab] = useState<'ROTEIRO' | 'GASTOS' | 'INFO' | 'DOCS'>('INFO');
   
   useEffect(() => {
     setTrip(initialTrip);
@@ -611,10 +837,14 @@ const TripDetailView = ({
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>(undefined);
 
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<TripDocument | undefined>(undefined);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+
   // Confirm Delete State
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
-    type: 'TRIP' | 'ACTIVITY' | 'EXPENSE' | null;
+    type: 'TRIP' | 'ACTIVITY' | 'EXPENSE' | 'DOCUMENT' | null;
     data: any; 
     title: string;
     message: string;
@@ -702,6 +932,17 @@ const TripDetailView = ({
     });
   };
 
+  const requestDeleteDocument = (docId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmConfig({
+      isOpen: true,
+      type: 'DOCUMENT',
+      data: docId,
+      title: 'Excluir Documento',
+      message: 'Deseja remover este documento?'
+    });
+  };
+
   const executeDelete = () => {
     if (confirmConfig.type === 'TRIP') {
       onDelete(confirmConfig.data);
@@ -719,6 +960,12 @@ const TripDetailView = ({
     else if (confirmConfig.type === 'EXPENSE') {
       const expenseId = confirmConfig.data;
       const updatedTrip = { ...trip, expenses: trip.expenses.filter(e => e.id !== expenseId) };
+      setTrip(updatedTrip);
+      onUpdate(updatedTrip);
+    }
+    else if (confirmConfig.type === 'DOCUMENT') {
+      const docId = confirmConfig.data;
+      const updatedTrip = { ...trip, documents: (trip.documents || []).filter(d => d.id !== docId) };
       setTrip(updatedTrip);
       onUpdate(updatedTrip);
     }
@@ -743,6 +990,33 @@ const TripDetailView = ({
     setEditingExpense(undefined);
   };
 
+  const handleEditDocument = (doc: TripDocument) => {
+    setEditingDocument(doc);
+    setShowDocumentModal(true);
+  };
+
+  const saveDocument = (doc: TripDocument) => {
+    let newDocs = [...(trip.documents || [])];
+    if (editingDocument) {
+      newDocs = newDocs.map(d => d.id === doc.id ? doc : d);
+    } else {
+      newDocs.push(doc);
+    }
+    const updatedTrip = { ...trip, documents: newDocs };
+    setTrip(updatedTrip);
+    onUpdate(updatedTrip);
+    setEditingDocument(undefined);
+  };
+
+  const toggleDocumentCheck = (docId: string) => {
+    const newDocs = (trip.documents || []).map(d => 
+      d.id === docId ? { ...d, isChecked: !d.isChecked } : d
+    );
+    const updatedTrip = { ...trip, documents: newDocs };
+    setTrip(updatedTrip);
+    onUpdate(updatedTrip);
+  };
+
   const getActivityIcon = (type: ActivityType) => {
     switch(type) {
       case ActivityType.FOOD: return <Utensils size={18} />;
@@ -764,28 +1038,18 @@ const TripDetailView = ({
     }
   };
 
-  // Helper to find next relevant day for "Summary View"
-  const getNextRelevantDay = () => {
+  const nextRelevant = (() => {
     const today = new Date();
     today.setHours(0,0,0,0);
     const todayStr = today.toISOString().split('T')[0];
-    
-    // Sort days to be sure
     const sortedDays = [...trip.days].sort((a,b) => a.date.localeCompare(b.date));
-    
-    // 1. Check if today is a trip day
     const todayDay = sortedDays.find(d => d.date === todayStr);
     if (todayDay) return { day: todayDay, label: 'Hoje' };
-    
-    // 2. Check if trip is in future (find first day >= today)
     const nextDay = sortedDays.find(d => d.date > todayStr);
-    if (nextDay) return { day: nextDay, label: `Dia ${nextDay.dayNumber}` }; // Start of trip or next leg
-    
-    // 3. Trip is in past? Return null or last day?
+    if (nextDay) return { day: nextDay, label: `Dia ${nextDay.dayNumber}` }; 
     return null;
-  };
+  })();
 
-  const nextRelevant = getNextRelevantDay();
   const totalSpent = trip.expenses.reduce((acc, cur) => acc + cur.amountInBRL, 0);
   const percentUsed = Math.min((totalSpent / trip.budgetBRL) * 100, 100);
   const bgImage = trip.coverImage || `https://picsum.photos/seed/${trip.destination}/800/400`;
@@ -798,6 +1062,11 @@ const TripDetailView = ({
         onConfirm={executeDelete}
         title={confirmConfig.title}
         message={confirmConfig.message}
+      />
+      
+      <ImageViewerModal 
+        src={fullScreenImage} 
+        onClose={() => setFullScreenImage(null)} 
       />
 
       {/* Hero Header */}
@@ -833,10 +1102,11 @@ const TripDetailView = ({
         
       {/* Floating Tabs */}
       <div className="px-4 -mt-6 relative z-30 mb-6">
-        <div className="bg-white rounded-full shadow-lg shadow-slate-200/50 p-1 flex justify-between">
-          <button onClick={() => setActiveTab('INFO')} className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === 'INFO' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Resumo</button>
-          <button onClick={() => setActiveTab('ROTEIRO')} className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === 'ROTEIRO' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Roteiro</button>
-          <button onClick={() => setActiveTab('GASTOS')} className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${activeTab === 'GASTOS' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Gastos</button>
+        <div className="bg-white rounded-full shadow-lg shadow-slate-200/50 p-1 flex justify-between overflow-x-auto no-scrollbar">
+          <button onClick={() => setActiveTab('INFO')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'INFO' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Resumo</button>
+          <button onClick={() => setActiveTab('ROTEIRO')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ROTEIRO' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Roteiro</button>
+          <button onClick={() => setActiveTab('GASTOS')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'GASTOS' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Gastos</button>
+          <button onClick={() => setActiveTab('DOCS')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'DOCS' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Docs</button>
         </div>
       </div>
 
@@ -844,7 +1114,6 @@ const TripDetailView = ({
       {activeTab === 'INFO' && (
         <div className="px-4 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           
-          {/* NEXT DAY CARD */}
           {nextRelevant ? (
              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                 <div className="flex justify-between items-center mb-4">
@@ -1008,7 +1277,7 @@ const TripDetailView = ({
                         </div>
                       </div>
                       
-                      {/* Action Buttons (Visible/Cleaner) */}
+                      {/* Action Buttons */}
                       <div className="mt-3 pt-3 border-t border-slate-50 flex justify-end gap-1">
                         <button onClick={() => handleEditActivity(day.id, activity)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16} className="pointer-events-none" /></button>
                         <button 
@@ -1124,6 +1393,76 @@ const TripDetailView = ({
           />
         </div>
       )}
+
+      {/* --- DOCS TAB --- */}
+      {activeTab === 'DOCS' && (
+        <div className="px-4 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-between items-center px-1">
+            <h3 className="font-bold text-slate-900 text-lg">Documentos Importantes</h3>
+            <button onClick={() => { setEditingDocument(undefined); setShowDocumentModal(true); }} className="flex items-center text-sm font-bold text-white bg-blue-600 px-4 py-2.5 rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors">
+              <Plus size={16} className="mr-1" /> Novo Doc
+            </button>
+          </div>
+
+          <div className="space-y-3 pb-8">
+            {(trip.documents || []).length === 0 && (
+              <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                <FolderOpen size={32} className="mx-auto mb-3 opacity-30" />
+                <p className="font-medium">Nenhum documento salvo.</p>
+                <p className="text-xs mt-1">Salve passaportes, vistos e seguros aqui.</p>
+              </div>
+            )}
+            {(trip.documents || []).map(doc => (
+              <div key={doc.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center group hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-4 flex-1">
+                  <button 
+                    onClick={() => toggleDocumentCheck(doc.id)} 
+                    className={`p-2 rounded-full transition-colors ${doc.isChecked ? 'text-green-500 bg-green-50' : 'text-slate-300 bg-slate-50 hover:bg-slate-100'}`}
+                  >
+                    <CheckSquare size={20} className={doc.isChecked ? "fill-green-500 text-white" : ""} />
+                  </button>
+                  
+                  <div className="flex-1">
+                    <p className={`font-bold text-base transition-all ${doc.isChecked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                      {doc.title}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  {doc.image && (
+                     <div 
+                        className="relative w-12 h-12 rounded-lg overflow-hidden cursor-pointer border border-slate-200 group/img"
+                        onClick={() => setFullScreenImage(doc.image || null)}
+                     >
+                       <img src={doc.image} className="w-full h-full object-cover" alt="thumbnail" />
+                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                          <Eye size={16} className="text-white drop-shadow-sm" />
+                       </div>
+                     </div>
+                  )}
+                  
+                  <div className="flex flex-col gap-1 border-l border-slate-100 pl-2">
+                     <button onClick={() => handleEditDocument(doc)} className="text-slate-300 hover:text-blue-600 p-1 transition-colors">
+                       <Edit2 size={14} className="pointer-events-none" />
+                     </button>
+                     <button onClick={(e) => requestDeleteDocument(doc.id, e)} className="relative z-10 text-slate-300 hover:text-red-500 p-1 transition-colors">
+                       <Trash2 size={14} className="pointer-events-none" />
+                     </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DocumentModal 
+            isOpen={showDocumentModal}
+            onClose={() => setShowDocumentModal(false)}
+            onSave={saveDocument}
+            initialDocument={editingDocument}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -1159,6 +1498,22 @@ export default function App() {
       setView('DASHBOARD');
     } catch (error) {
       console.error("Login failed", error);
+      alert("Falha no login com Google (Modo Teste)");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+      const u = await storageService.mockEmailLogin(email, pass);
+      setUser(u);
+      await loadTrips();
+      setView('DASHBOARD');
+    } catch (error) {
+      console.error("Email Login failed", error);
+      alert("Falha no login. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -1194,7 +1549,7 @@ export default function App() {
   };
 
   if (view === 'LOGIN') {
-    return <LoginView onLogin={handleLogin} loading={loading} />;
+    return <LoginView onGoogleLogin={handleLogin} onEmailLogin={handleEmailLogin} loading={loading} />;
   }
 
   if (view === 'CREATE_TRIP') {
