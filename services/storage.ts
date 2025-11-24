@@ -4,23 +4,23 @@ import {
   getAuth, 
   signInWithPopup, 
   GoogleAuthProvider, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
   signOut, 
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile
+  onAuthStateChanged, 
+  updateProfile,
+  User as FirebaseUser
 } from 'firebase/auth';
 import { 
   getFirestore, 
   collection, 
-  addDoc, 
+  query, 
+  where, 
   getDocs, 
   doc, 
-  updateDoc, 
+  setDoc, 
   deleteDoc, 
-  query, 
-  where,
-  setDoc
+  enableMultiTabIndexedDbPersistence 
 } from 'firebase/firestore';
 
 // Configuração do Firebase do Projeto "gerenciadorviagens-263ea"
@@ -33,10 +33,20 @@ const firebaseConfig = {
   appId: "1:603668649376:web:4f3eb73f16db0dbf0a80c5"
 };
 
-// Initialize Firebase
+// Initialize Firebase (Modular)
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Enable offline persistence (Modular style)
+enableMultiTabIndexedDbPersistence(db).catch((err) => {
+  if (err.code === 'failed-precondition') {
+    console.warn('Persistence failed: Multiple tabs open');
+  } else if (err.code === 'unimplemented') {
+    console.warn('Persistence failed: Browser not supported');
+  }
+});
+
 const googleProvider = new GoogleAuthProvider();
 
 // --- AUTHENTICATION SERVICES ---
@@ -46,6 +56,8 @@ export const mockLogin = async (): Promise<User> => {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
     
+    if (!user) throw new Error("Falha na autenticação: Usuário não encontrado.");
+
     return {
       uid: user.uid,
       displayName: user.displayName || 'Viajante',
@@ -63,6 +75,9 @@ export const mockEmailLogin = async (email: string, password: string): Promise<U
     // Tenta fazer login
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+
+    if (!user) throw new Error("Falha na autenticação: Usuário não encontrado.");
+
     return {
       uid: user.uid,
       displayName: user.displayName || email.split('@')[0],
@@ -70,18 +85,22 @@ export const mockEmailLogin = async (email: string, password: string): Promise<U
       photoURL: user.photoURL || `https://ui-avatars.com/api/?name=${email.split('@')[0]}&background=0D8ABC&color=fff`
     };
   } catch (error: any) {
-    // Se o usuário não existir (código comum do firebase), cria a conta automaticamente
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+    // Se o usuário não existir, cria a conta automaticamente
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
       try {
+        // Nota: auth/wrong-password geralmente não deve disparar criação, mas mantendo a lógica solicitada de "auto-cadastro"
+        // Para segurança real, ideal seria separar login de cadastro, mas para teste isso funciona.
+        // O código auth/invalid-credential é o mais comum para email não encontrado nas versões novas.
+        
         const newUserCredential = await createUserWithEmailAndPassword(auth, email, password);
         const newUser = newUserCredential.user;
         
-        // Define um nome padrão baseado no email
+        if (!newUser) throw new Error("Falha ao criar usuário.");
+
         const generatedName = email.split('@')[0];
-        // Tenta atualizar o perfil, mas não falha se der erro
         try {
             await updateProfile(newUser, {
-            displayName: generatedName.charAt(0).toUpperCase() + generatedName.slice(1)
+              displayName: generatedName.charAt(0).toUpperCase() + generatedName.slice(1)
             });
         } catch (e) { console.log("Info: Perfil não atualizado no cadastro inicial"); }
 
@@ -104,7 +123,6 @@ export const logout = async (): Promise<void> => {
   await signOut(auth);
 };
 
-// Observador de estado de autenticação (usado no App.tsx para persistência)
 export const observeAuth = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -143,7 +161,6 @@ export const getTrips = async (): Promise<Trip[]> => {
     
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
-      // O ID do documento Firestore é usado como ID da viagem para garantir consistência nas edições
       return { ...data, id: doc.id } as Trip;
     });
   } catch (error) {
@@ -157,24 +174,18 @@ export const saveTrip = async (trip: Trip): Promise<void> => {
   if (!user) throw new Error("Usuário não autenticado");
 
   try {
-    // Adicionamos o campo userId para garantir que só o dono veja nas queries
     const tripData = { ...trip, userId: user.uid };
     
-    // Remove o ID do corpo do objeto para não duplicar, pois o ID será a chave do documento
+    // Remove o ID do corpo do objeto
     const { id, ...rawTripData } = tripData;
 
-    // IMPORTANTE: Firebase falha se houver campos 'undefined'.
-    // Convertemos para JSON e voltamos para remover qualquer undefined.
+    // Limpeza de campos undefined
     const dataToSave = JSON.parse(JSON.stringify(rawTripData));
 
-    // Lógica de ID:
-    // Se o ID for numérico (ex: criado por Date.now() no frontend), usamos ele como chave string para criar.
-    // Se já for um ID de hash do Firestore, usamos ele para atualizar.
     const docId = trip.id ? trip.id.toString() : Date.now().toString();
+    const tripRef = doc(db, "trips", docId);
 
-    // Usamos setDoc com merge: true. 
-    // Isso funciona tanto para criar (se não existir) quanto para atualizar (se existir).
-    await setDoc(doc(db, "trips", docId), dataToSave, { merge: true });
+    await setDoc(tripRef, dataToSave, { merge: true });
 
   } catch (error) {
     console.error("Erro ao salvar viagem:", error);

@@ -4,7 +4,7 @@ import { Button } from './components/Button';
 import { TripCard } from './components/TripCard';
 import { Trip, User, ViewState, Activity, DayItinerary, ActivityType, CurrencyConfig, Expense, Attachment, TripDocument } from './types';
 import * as storageService from './services/storage';
-import { MapPin, Calendar, DollarSign, Plus, Clock, Map, Utensils, Bed, Camera, ArrowLeft, Trash2, Edit2, Plane, Train, Bus, FileText, PieChart, Image as ImageIcon, X, Save, Upload, Banknote, Settings, GraduationCap, Timer, AlertTriangle, ExternalLink, ChevronRight, CheckSquare, FolderOpen, Eye, Mail, Lock, RefreshCw } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Plus, Clock, Map, Utensils, Bed, Camera, ArrowLeft, Trash2, Edit2, Plane, Train, Bus, FileText, PieChart, Image as ImageIcon, X, Save, Upload, Banknote, Settings, GraduationCap, Timer, AlertTriangle, ExternalLink, ChevronRight, CheckSquare, FolderOpen, Eye, Mail, Lock, RefreshCw, Navigation } from 'lucide-react';
 
 // --- Utils ---
 
@@ -680,6 +680,16 @@ const ActivityModal = ({
                 placeholder="Ex: Champ de Mars, 5 Av. Anatole France" 
               />
             </div>
+            {location && (
+               <a 
+                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="text-xs text-blue-600 font-bold mt-1 inline-flex items-center hover:underline"
+               >
+                 <ExternalLink size={12} className="mr-1" /> Abrir no Google Maps
+               </a>
+            )}
           </div>
 
           <div>
@@ -1109,6 +1119,52 @@ const TripDetailView = ({
       <div className="p-6">
         {activeTab === 'INFO' && (
             <div className="space-y-6">
+                
+                {/* Next Day Card - RESTORED */}
+                {nextRelevant && (
+                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-5 rounded-2xl shadow-lg shadow-blue-200 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                            <Navigation size={80} />
+                        </div>
+                        <div className="relative z-10">
+                            <h3 className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-2">Próximo Passo • {nextRelevant.label}</h3>
+                            <p className="text-2xl font-bold mb-4">{getLocalDate(nextRelevant.day.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                            
+                            <div className="space-y-3 bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                                {nextRelevant.day.activities.length === 0 ? (
+                                    <p className="text-blue-100 text-sm">Nada planejado ainda.</p>
+                                ) : (
+                                    nextRelevant.day.activities.slice(0, 3).map(act => (
+                                        <div key={act.id} className="flex items-center text-sm">
+                                            <span className="font-bold w-12 text-blue-200">{act.time}</span>
+                                            <span className="truncate flex-1">{act.title}</span>
+                                        </div>
+                                    ))
+                                )}
+                                {nextRelevant.day.activities.length > 3 && (
+                                    <p className="text-xs text-blue-300 text-center pt-1">+ mais {nextRelevant.day.activities.length - 3} atividades</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Currency Card - RESTORED */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                     <h3 className="font-bold text-slate-900 mb-4 flex items-center"><Banknote size={20} className="mr-2 text-green-500" /> Cotações</h3>
+                     <div className="space-y-3">
+                        {trip.currencies.map((curr, idx) => (
+                            <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                                <span className="font-bold text-slate-700">1 {curr.code}</span>
+                                <div className="flex items-center text-slate-500">
+                                    <span className="text-xs mr-2">igual a</span>
+                                    <span className="font-bold text-slate-900 bg-white px-2 py-1 rounded border border-slate-200">{formatMoney(curr.rateToBRL)}</span>
+                                </div>
+                            </div>
+                        ))}
+                     </div>
+                </div>
+
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-slate-900 flex items-center"><FileText size={20} className="mr-2 text-blue-500" /> Notas de Viagem</h3>
@@ -1430,10 +1486,10 @@ export default function App() {
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
       let msg = "Erro ao salvar viagem.";
-      if (error.code === 'permission-denied') {
-        msg = "Permissão negada. Verifique as Regras de Segurança no Firebase Console.";
+      if (error.code === 'permission-denied' || (error.message && error.message.includes("permission"))) {
+        msg = "Permissão negada. Verifique as Regras de Segurança (Rules) no Firebase Console. Certifique-se de que estão configuradas como 'allow read, write: if request.auth != null && ...'";
       } else if (error.message && error.message.includes("undefined")) {
-        msg = "Erro de dados inválidos (campo indefinido).";
+        msg = "Erro de dados inválidos (campo indefinido). Tente novamente.";
       }
       alert(msg);
     }
@@ -1445,7 +1501,12 @@ export default function App() {
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
     
     // Atualização real no banco
-    await storageService.saveTrip(updatedTrip);
+    try {
+        await storageService.saveTrip(updatedTrip);
+    } catch (error: any) {
+        console.error("Erro ao atualizar viagem", error);
+        alert("Erro ao salvar atualização no servidor.");
+    }
   };
 
   const handleDeleteTrip = async (tripId: string) => {
