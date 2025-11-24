@@ -161,7 +161,11 @@ export const saveTrip = async (trip: Trip): Promise<void> => {
     const tripData = { ...trip, userId: user.uid };
     
     // Remove o ID do corpo do objeto para não duplicar, pois o ID será a chave do documento
-    const { id, ...dataToSave } = tripData;
+    const { id, ...rawTripData } = tripData;
+
+    // IMPORTANTE: Firebase falha se houver campos 'undefined'.
+    // Convertemos para JSON e voltamos para remover qualquer undefined.
+    const dataToSave = JSON.parse(JSON.stringify(rawTripData));
 
     // Lógica de ID:
     // Se o ID for numérico (ex: criado por Date.now() no frontend), usamos ele como chave string para criar.

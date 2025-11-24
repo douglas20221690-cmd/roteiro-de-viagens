@@ -1055,414 +1055,295 @@ const TripDetailView = ({
   const bgImage = trip.coverImage || `https://picsum.photos/seed/${trip.destination}/800/400`;
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-20 font-sans">
+    <div className="pb-20">
+      {/* Header with Back button & Image */}
+      <div className="relative h-48 md:h-64">
+        <div className="absolute inset-0">
+            <img src={bgImage} alt={trip.destination} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        </div>
+        <button 
+            onClick={onBack}
+            className="absolute top-4 left-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors"
+        >
+            <ArrowLeft size={24} />
+        </button>
+        <button 
+            onClick={onEditTrip}
+            className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors"
+        >
+            <Edit2 size={24} />
+        </button>
+        <div className="absolute bottom-4 left-6 text-white">
+            <h1 className="text-3xl font-bold mb-1">{trip.destination}</h1>
+            <div className="flex items-center text-sm opacity-90">
+                <Calendar size={14} className="mr-2" />
+                {getLocalDate(trip.startDate).toLocaleDateString('pt-BR')} - {getLocalDate(trip.endDate).toLocaleDateString('pt-BR')}
+            </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex overflow-x-auto no-scrollbar border-b border-slate-200 bg-white sticky top-0 z-10 shadow-sm">
+        {[
+            { id: 'INFO', label: 'Info', icon: <FileText size={18} /> },
+            { id: 'ROTEIRO', label: 'Roteiro', icon: <Map size={18} /> },
+            { id: 'GASTOS', label: 'Gastos', icon: <PieChart size={18} /> },
+            { id: 'DOCS', label: 'Docs', icon: <FolderOpen size={18} /> },
+        ].map(tab => (
+            <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 flex flex-col items-center justify-center py-3 min-w-[80px] text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+                    activeTab === tab.id 
+                    ? 'border-blue-600 text-blue-600 bg-blue-50/50' 
+                    : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                }`}
+            >
+                <div className="mb-1">{tab.icon}</div>
+                {tab.label}
+            </button>
+        ))}
+      </div>
+
+      <div className="p-6">
+        {activeTab === 'INFO' && (
+            <div className="space-y-6">
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-slate-900 flex items-center"><FileText size={20} className="mr-2 text-blue-500" /> Notas de Viagem</h3>
+                        {!isEditingNotes ? (
+                            <button onClick={() => setIsEditingNotes(true)} className="text-blue-600 text-sm font-bold">Editar</button>
+                        ) : (
+                            <button onClick={saveNotes} className="text-green-600 text-sm font-bold">Salvar</button>
+                        )}
+                    </div>
+                    {isEditingNotes ? (
+                        <textarea 
+                            className="w-full h-40 p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 leading-relaxed"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Escreva anotações importantes..."
+                        />
+                    ) : (
+                        <p className="text-slate-600 whitespace-pre-wrap leading-relaxed">{notes || "Nenhuma anotação."}</p>
+                    )}
+                </div>
+                
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                     <h3 className="font-bold text-slate-900 mb-4 flex items-center"><MapPin size={20} className="mr-2 text-orange-500" /> Cidades</h3>
+                     <div className="flex flex-wrap gap-2">
+                        {trip.cities.map((city, idx) => (
+                            <span key={idx} className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium">{city}</span>
+                        ))}
+                     </div>
+                </div>
+
+                <div className="mt-8">
+                    <button 
+                        onClick={requestDeleteTrip}
+                        className="w-full py-4 rounded-xl border border-red-100 text-red-500 bg-red-50 font-semibold hover:bg-red-100 transition-colors flex items-center justify-center"
+                    >
+                        <Trash2 size={20} className="mr-2" /> Excluir Viagem
+                    </button>
+                </div>
+            </div>
+        )}
+
+        {activeTab === 'ROTEIRO' && (
+            <div className="space-y-6">
+                {trip.days.sort((a,b) => a.dayNumber - b.dayNumber).map(day => (
+                    <div key={day.id} className="relative pl-4 border-l-2 border-slate-200">
+                         <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 ring-4 ring-white" />
+                         <div className="mb-4">
+                             <h4 className="text-lg font-bold text-slate-900">Dia {day.dayNumber} - <span className="text-slate-500 text-base font-normal">{getLocalDate(day.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span></h4>
+                             <button onClick={() => handleAddActivity(day.id)} className="mt-2 text-blue-600 text-sm font-bold flex items-center hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors w-fit">
+                                 <Plus size={16} className="mr-1" /> Adicionar Atividade
+                             </button>
+                         </div>
+                         
+                         <div className="space-y-3">
+                             {day.activities.length === 0 && <p className="text-slate-400 text-sm italic">Nenhuma atividade planejada.</p>}
+                             {day.activities.sort((a,b) => a.time.localeCompare(b.time)).map(activity => (
+                                 <div 
+                                    key={activity.id} 
+                                    onClick={() => handleEditActivity(day.id, activity)}
+                                    className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer group"
+                                 >
+                                     <div className="flex justify-between items-start">
+                                         <div className="flex gap-3">
+                                             <div className={`p-2 rounded-lg h-fit ${getActivityColor(activity.type)}`}>
+                                                 {getActivityIcon(activity.type)}
+                                             </div>
+                                             <div>
+                                                 <span className="text-xs font-bold text-slate-400 block mb-0.5">{activity.time}</span>
+                                                 <h5 className="font-bold text-slate-800">{activity.title}</h5>
+                                                 {activity.location && (
+                                                     <p className="text-slate-500 text-sm flex items-center mt-1">
+                                                         <MapPin size={12} className="mr-1" /> {activity.location}
+                                                     </p>
+                                                 )}
+                                             </div>
+                                         </div>
+                                         <button 
+                                            onClick={(e) => requestDeleteActivity(day.id, activity.id, e)}
+                                            className="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                         >
+                                             <Trash2 size={16} />
+                                         </button>
+                                     </div>
+                                 </div>
+                             ))}
+                         </div>
+                    </div>
+                ))}
+            </div>
+        )}
+
+        {activeTab === 'GASTOS' && (
+            <div>
+                 <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl shadow-slate-200 mb-6 relative overflow-hidden">
+                     <div className="relative z-10">
+                         <span className="text-slate-400 text-sm font-bold uppercase tracking-wide">Total Gasto</span>
+                         <div className="text-3xl font-bold mb-2">{formatMoney(totalSpent)}</div>
+                         <div className="flex justify-between text-sm text-slate-400 mb-2">
+                             <span>Orçamento: {formatMoney(trip.budgetBRL)}</span>
+                             <span>{percentUsed.toFixed(1)}%</span>
+                         </div>
+                         <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                             <div 
+                                className={`h-full rounded-full ${percentUsed > 100 ? 'bg-red-500' : 'bg-green-500'}`} 
+                                style={{ width: `${Math.min(percentUsed, 100)}%` }} 
+                             />
+                         </div>
+                     </div>
+                 </div>
+
+                 <div className="flex justify-end mb-4">
+                     <Button onClick={() => { setEditingExpense(undefined); setShowExpenseModal(true); }} className="py-2.5 text-sm" icon={<Plus size={18} />}>
+                        Novo Gasto
+                     </Button>
+                 </div>
+
+                 <div className="space-y-3">
+                     {trip.expenses.length === 0 && (
+                        <div className="text-center py-10 text-slate-400">
+                            <DollarSign size={48} className="mx-auto mb-2 opacity-20" />
+                            <p>Nenhum gasto registrado.</p>
+                        </div>
+                     )}
+                     {trip.expenses.slice().reverse().map(expense => (
+                         <div 
+                            key={expense.id}
+                            onClick={() => handleEditExpense(expense)}
+                            className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center cursor-pointer hover:shadow-md transition-all"
+                         >
+                             <div className="flex items-center gap-3">
+                                 <div className="bg-green-50 text-green-600 p-2.5 rounded-full">
+                                     <DollarSign size={20} />
+                                 </div>
+                                 <div>
+                                     <h5 className="font-bold text-slate-800">{expense.description}</h5>
+                                     <p className="text-xs text-slate-500">{expense.category} • {new Date(expense.date).toLocaleDateString('pt-BR')}</p>
+                                 </div>
+                             </div>
+                             <div className="text-right">
+                                 <div className="font-bold text-slate-900">
+                                     {expense.currency !== 'BRL' && <span className="text-xs text-slate-400 mr-1">{expense.currency} {expense.amount} ≈</span>}
+                                     {formatMoney(expense.amountInBRL)}
+                                 </div>
+                                 <button 
+                                    onClick={(e) => requestDeleteExpense(expense.id, e)}
+                                    className="text-xs text-red-400 hover:text-red-600 font-medium mt-1"
+                                 >
+                                    Excluir
+                                 </button>
+                             </div>
+                         </div>
+                     ))}
+                 </div>
+            </div>
+        )}
+
+        {activeTab === 'DOCS' && (
+            <div>
+                <div className="flex justify-end mb-4">
+                     <Button onClick={() => { setEditingDocument(undefined); setShowDocumentModal(true); }} className="py-2.5 text-sm" icon={<Plus size={18} />}>
+                        Novo Documento
+                     </Button>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                    {trip.documents.length === 0 && (
+                         <div className="col-span-2 text-center py-10 text-slate-400">
+                            <FolderOpen size={48} className="mx-auto mb-2 opacity-20" />
+                            <p>Nenhum documento salvo.</p>
+                        </div>
+                    )}
+                    {trip.documents.map(doc => (
+                        <div key={doc.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                             <div className="relative h-24 bg-slate-100 rounded-lg mb-3 overflow-hidden group cursor-pointer" onClick={() => doc.image && setFullScreenImage(doc.image)}>
+                                 {doc.image ? (
+                                    <img src={doc.image} alt={doc.title} className="w-full h-full object-cover" />
+                                 ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                        <FileText size={32} />
+                                    </div>
+                                 )}
+                             </div>
+                             <div className="flex items-center justify-between mb-2">
+                                 <h5 className="font-bold text-slate-800 text-sm truncate pr-2">{doc.title}</h5>
+                                 <button onClick={() => toggleDocumentCheck(doc.id)}>
+                                     {doc.isChecked ? <CheckSquare size={18} className="text-green-500" /> : <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded" />}
+                                 </button>
+                             </div>
+                             <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-50">
+                                 <button onClick={() => handleEditDocument(doc)} className="text-slate-400 hover:text-blue-500"><Edit2 size={16} /></button>
+                                 <button onClick={(e) => requestDeleteDocument(doc.id, e)} className="text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
+                             </div>
+                        </div>
+                    ))}
+                 </div>
+            </div>
+        )}
+      </div>
+
+      {/* Modals */}
       <ConfirmModal 
         isOpen={confirmConfig.isOpen}
-        onClose={() => setConfirmConfig({...confirmConfig, isOpen: false})}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
         onConfirm={executeDelete}
         title={confirmConfig.title}
         message={confirmConfig.message}
       />
-      
-      <ImageViewerModal 
-        src={fullScreenImage} 
-        onClose={() => setFullScreenImage(null)} 
+
+      <ActivityModal 
+        isOpen={showActivityModal}
+        onClose={() => setShowActivityModal(false)}
+        onSave={saveActivity}
+        initialActivity={editingActivity}
+        date={editingDayId ? trip.days.find(d => d.id === editingDayId)?.date || '' : ''}
       />
 
-      {/* Hero Header */}
-      <div className="relative h-64 w-full">
-         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent z-10" />
-         <img src={bgImage} alt={trip.destination} className="w-full h-full object-cover" />
-         
-         <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center text-white">
-            <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-white/20 backdrop-blur-md transition-colors">
-              <ArrowLeft size={24} />
-            </button>
-            <div className="flex gap-2">
-               <button onClick={onEditTrip} className="p-2 rounded-full hover:bg-white/20 backdrop-blur-md text-white transition-colors">
-                 <Edit2 size={20} className="pointer-events-none" />
-               </button>
-               <button 
-                  onClick={requestDeleteTrip} 
-                  className="p-2 rounded-full hover:bg-white/20 backdrop-blur-md text-white hover:text-red-300 transition-colors relative z-20"
-                >
-                 <Trash2 size={20} className="pointer-events-none" />
-               </button>
-            </div>
-         </div>
+      <ExpenseModal 
+        isOpen={showExpenseModal}
+        onClose={() => setShowExpenseModal(false)}
+        onSave={saveExpense}
+        currencies={trip.currencies}
+        initialExpense={editingExpense}
+      />
 
-         <div className="absolute bottom-0 left-0 right-0 z-20 p-6">
-            <h1 className="text-3xl font-bold text-white mb-1 shadow-sm">{trip.destination}</h1>
-            <p className="text-blue-100 flex items-center text-sm font-medium">
-              <Calendar size={14} className="mr-2" />
-              {getLocalDate(trip.startDate).toLocaleDateString('pt-BR')} - {getLocalDate(trip.endDate).toLocaleDateString('pt-BR')}
-            </p>
-         </div>
-      </div>
-        
-      {/* Floating Tabs */}
-      <div className="px-4 -mt-6 relative z-30 mb-6">
-        <div className="bg-white rounded-full shadow-lg shadow-slate-200/50 p-1 flex justify-between overflow-x-auto no-scrollbar">
-          <button onClick={() => setActiveTab('INFO')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'INFO' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Resumo</button>
-          <button onClick={() => setActiveTab('ROTEIRO')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'ROTEIRO' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Roteiro</button>
-          <button onClick={() => setActiveTab('GASTOS')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'GASTOS' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Gastos</button>
-          <button onClick={() => setActiveTab('DOCS')} className={`flex-1 min-w-[80px] py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'DOCS' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Docs</button>
-        </div>
-      </div>
-
-      {/* --- INFO TAB --- */}
-      {activeTab === 'INFO' && (
-        <div className="px-4 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          
-          {nextRelevant ? (
-             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wide bg-blue-50 px-2 py-1 rounded-md">{nextRelevant.label}</span>
-                    <h3 className="font-bold text-slate-800 text-lg mt-1">
-                      {getLocalDate(nextRelevant.day.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </h3>
-                  </div>
-                  <button onClick={() => setActiveTab('ROTEIRO')} className="text-slate-400 hover:text-blue-600">
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-                
-                <div className="space-y-3">
-                  {nextRelevant.day.activities.length === 0 ? (
-                    <p className="text-slate-400 text-sm italic">Nada planejado para este dia.</p>
-                  ) : (
-                    nextRelevant.day.activities.slice(0, 3).map((act, i) => (
-                      <div key={i} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                        <span className="text-xs font-mono font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{act.time}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-800 truncate">{act.title}</p>
-                          {act.location && <p className="text-xs text-slate-400 truncate">{act.location}</p>}
-                        </div>
-                        <div className={`w-2 h-2 rounded-full ${getActivityColor(act.type).replace('bg-', 'bg-').split(' ')[0]}`}></div>
-                      </div>
-                    ))
-                  )}
-                  {nextRelevant.day.activities.length > 3 && (
-                    <p className="text-center text-xs text-slate-400 mt-2">+ {nextRelevant.day.activities.length - 3} atividades</p>
-                  )}
-                </div>
-             </div>
-          ) : (
-             <div className="bg-green-50 p-5 rounded-2xl border border-green-100 text-center">
-                <p className="text-green-700 font-medium">Viagem Concluída! 🎉</p>
-             </div>
-          )}
-
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-slate-800 flex items-center"><FileText size={18} className="mr-2 text-slate-400" /> Notas</h3>
-              <button onClick={() => isEditingNotes ? saveNotes() : setIsEditingNotes(true)} className="text-blue-600 text-sm font-bold">
-                {isEditingNotes ? 'Salvar' : 'Editar'}
-              </button>
-            </div>
-            {isEditingNotes ? (
-              <textarea 
-                className="w-full h-32 p-3 border rounded-xl text-sm bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500"
-                value={notes} 
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Escreva aqui códigos de reserva, dicas, etc..."
-              />
-            ) : (
-              <div className="bg-slate-50 rounded-xl p-4">
-                 <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">{notes || 'Nenhuma nota adicionada.'}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Cidades</h3>
-               <div className="flex flex-wrap gap-2">
-                 {trip.cities.map((city, i) => (
-                   <span key={i} className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-bold">{city}</span>
-                 ))}
-               </div>
-             </div>
-             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Cotações</h3>
-                <div className="space-y-2">
-                  {trip.currencies.map((curr, i) => (
-                    <div key={i} className="flex justify-between items-center">
-                      <span className="font-bold text-slate-700 text-sm">{curr.code}</span>
-                      <span className="text-slate-500 text-xs">R$ {curr.rateToBRL.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-             </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- ROTEIRO TAB --- */}
-      {activeTab === 'ROTEIRO' && (
-        <div className="px-4 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-          {trip.days.map((day) => {
-             const dayDate = getLocalDate(day.date);
-             return (
-              <div key={day.id} className="relative pl-6 border-l-2 border-slate-200 ml-2">
-                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-900 border-4 border-slate-100 shadow-sm"></div>
-                
-                <div className="mb-5 flex justify-between items-start pt-1">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-2xl capitalize leading-none mb-1">
-                      {dayDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '')}
-                    </h3>
-                    <p className="text-slate-400 text-sm font-medium capitalize">
-                       {dayDate.toLocaleDateString('pt-BR', { weekday: 'long' })} <span className="text-slate-300 mx-1">•</span> Dia {day.dayNumber}
-                    </p>
-                  </div>
-                  <button onClick={() => handleAddActivity(day.id)} className="bg-slate-900 text-white p-2 rounded-xl shadow-lg shadow-slate-200 hover:bg-slate-800 active:scale-95 transition-all">
-                    <Plus size={20} />
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
-                  {day.activities.length === 0 && (
-                     <div className="bg-slate-50 rounded-2xl p-6 text-center border border-dashed border-slate-200">
-                        <p className="text-slate-400 text-sm font-medium">Nenhuma atividade.</p>
-                     </div>
-                  )}
-                  {day.activities.map((activity) => (
-                    <div key={activity.id} className="group bg-white p-4 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative overflow-hidden">
-                      <div className="flex gap-4">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${getActivityColor(activity.type)}`}>
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1 min-w-0 py-0.5">
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-bold text-slate-800 text-base truncate pr-2">{activity.title}</h4>
-                            <span className="text-xs font-bold font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md shrink-0">{activity.time}</span>
-                          </div>
-                          
-                          {activity.location && (
-                            <div className="flex items-center mt-1.5 mb-1 text-xs text-slate-500">
-                              <MapPin size={12} className="mr-1 shrink-0 text-slate-400" /> 
-                              <a 
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="truncate hover:text-blue-600 hover:underline cursor-pointer transition-colors"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {activity.location}
-                              </a>
-                            </div>
-                          )}
-                          
-                          {activity.description && <p className="text-slate-500 text-sm mt-2 leading-relaxed border-l-2 border-slate-100 pl-2">{activity.description}</p>}
-                          
-                          {/* Attachments */}
-                          {activity.attachments && activity.attachments.length > 0 && (
-                            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                              {activity.attachments.map(att => (
-                                <div key={att.id} className="relative group/att shrink-0 cursor-pointer">
-                                  {att.type === 'IMAGE' ? (
-                                    <img src={att.data} alt="att" className="h-14 w-14 object-cover rounded-lg border border-slate-200" />
-                                  ) : (
-                                    <div className="h-14 w-14 bg-red-50 rounded-lg flex flex-col items-center justify-center border border-red-100 text-red-500">
-                                      <FileText size={18} />
-                                      <span className="text-[7px] uppercase mt-1 font-bold">PDF</span>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Action Buttons */}
-                      <div className="mt-3 pt-3 border-t border-slate-50 flex justify-end gap-1">
-                        <button onClick={() => handleEditActivity(day.id, activity)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16} className="pointer-events-none" /></button>
-                        <button 
-                          onClick={(e) => requestDeleteActivity(day.id, activity.id, e)} 
-                          className="relative z-10 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} className="pointer-events-none" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-             );
-          })}
-          
-          <ActivityModal 
-            isOpen={showActivityModal} 
-            onClose={() => setShowActivityModal(false)}
-            onSave={saveActivity}
-            initialActivity={editingActivity}
-            date={editingDayId ? trip.days.find(d => d.id === editingDayId)?.date || '' : ''}
-          />
-        </div>
-      )}
-
-      {/* --- GASTOS TAB --- */}
-      {activeTab === 'GASTOS' && (
-        <div className="px-4 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-lg shadow-slate-200">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <p className="text-slate-400 text-sm font-medium mb-1">Gasto Total Estimado</p>
-                <h2 className="text-4xl font-bold">{formatMoney(totalSpent)}</h2>
-              </div>
-              <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                 <PieChart className="text-blue-300" size={24} />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-medium text-slate-300">
-                <span>Orçamento: {formatMoney(trip.budgetBRL)}</span>
-                <span className="text-slate-300">
-                  {percentUsed.toFixed(1)}% utilizado
-                </span>
-              </div>
-              <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-1000 ${percentUsed > 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`} 
-                  style={{ width: `${Math.min(percentUsed, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center px-1">
-            <h3 className="font-bold text-slate-900 text-lg">Histórico</h3>
-            <button onClick={() => { setEditingExpense(undefined); setShowExpenseModal(true); }} className="flex items-center text-sm font-bold text-white bg-blue-600 px-4 py-2.5 rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors">
-              <Plus size={16} className="mr-1" /> Novo Gasto
-            </button>
-          </div>
-
-          <div className="space-y-3 pb-8">
-            {trip.expenses.length === 0 && (
-              <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
-                <Banknote size={32} className="mx-auto mb-3 opacity-30" />
-                <p className="font-medium">Nenhum gasto registrado.</p>
-              </div>
-            )}
-            {trip.expenses.slice().reverse().map(expense => (
-              <div key={expense.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500">
-                    <DollarSign size={18} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">{expense.description}</p>
-                    <div className="flex items-center text-xs text-slate-500 mt-0.5">
-                      <span className="font-medium text-blue-600 mr-2">{expense.category}</span>
-                      <span>• {getLocalDate(expense.date.split('T')[0]).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="font-bold text-slate-900">{formatMoney(expense.amountInBRL)}</p>
-                    {expense.currency !== 'BRL' && (
-                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{expense.currency} {expense.amount}</p>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-col gap-1 border-l border-slate-100 pl-2">
-                     <button onClick={() => handleEditExpense(expense)} className="text-slate-300 hover:text-blue-600 p-1 transition-colors">
-                       <Edit2 size={14} className="pointer-events-none" />
-                     </button>
-                     <button onClick={(e) => requestDeleteExpense(expense.id, e)} className="relative z-10 text-slate-300 hover:text-red-500 p-1 transition-colors">
-                       <Trash2 size={14} className="pointer-events-none" />
-                     </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <ExpenseModal 
-            isOpen={showExpenseModal} 
-            onClose={() => setShowExpenseModal(false)} 
-            onSave={saveExpense} 
-            currencies={trip.currencies} 
-            initialExpense={editingExpense}
-          />
-        </div>
-      )}
-
-      {/* --- DOCS TAB --- */}
-      {activeTab === 'DOCS' && (
-        <div className="px-4 space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="font-bold text-slate-900 text-lg">Documentos Importantes</h3>
-            <button onClick={() => { setEditingDocument(undefined); setShowDocumentModal(true); }} className="flex items-center text-sm font-bold text-white bg-blue-600 px-4 py-2.5 rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors">
-              <Plus size={16} className="mr-1" /> Novo Doc
-            </button>
-          </div>
-
-          <div className="space-y-3 pb-8">
-            {(trip.documents || []).length === 0 && (
-              <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
-                <FolderOpen size={32} className="mx-auto mb-3 opacity-30" />
-                <p className="font-medium">Nenhum documento salvo.</p>
-                <p className="text-xs mt-1">Salve passaportes, vistos e seguros aqui.</p>
-              </div>
-            )}
-            {(trip.documents || []).map(doc => (
-              <div key={doc.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center group hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-4 flex-1">
-                  <button 
-                    onClick={() => toggleDocumentCheck(doc.id)} 
-                    className={`p-2 rounded-full transition-colors ${doc.isChecked ? 'text-green-500 bg-green-50' : 'text-slate-300 bg-slate-50 hover:bg-slate-100'}`}
-                  >
-                    <CheckSquare size={20} className={doc.isChecked ? "fill-green-500 text-white" : ""} />
-                  </button>
-                  
-                  <div className="flex-1">
-                    <p className={`font-bold text-base transition-all ${doc.isChecked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                      {doc.title}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  {doc.image && (
-                     <div 
-                        className="relative w-12 h-12 rounded-lg overflow-hidden cursor-pointer border border-slate-200 group/img"
-                        onClick={() => setFullScreenImage(doc.image || null)}
-                     >
-                       <img src={doc.image} className="w-full h-full object-cover" alt="thumbnail" />
-                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
-                          <Eye size={16} className="text-white drop-shadow-sm" />
-                       </div>
-                     </div>
-                  )}
-                  
-                  <div className="flex flex-col gap-1 border-l border-slate-100 pl-2">
-                     <button onClick={() => handleEditDocument(doc)} className="text-slate-300 hover:text-blue-600 p-1 transition-colors">
-                       <Edit2 size={14} className="pointer-events-none" />
-                     </button>
-                     <button onClick={(e) => requestDeleteDocument(doc.id, e)} className="relative z-10 text-slate-300 hover:text-red-500 p-1 transition-colors">
-                       <Trash2 size={14} className="pointer-events-none" />
-                     </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <DocumentModal 
-            isOpen={showDocumentModal}
-            onClose={() => setShowDocumentModal(false)}
-            onSave={saveDocument}
-            initialDocument={editingDocument}
-          />
-        </div>
-      )}
+      <DocumentModal
+        isOpen={showDocumentModal}
+        onClose={() => setShowDocumentModal(false)}
+        onSave={saveDocument}
+        initialDocument={editingDocument}
+      />
+      
+      <ImageViewerModal 
+        src={fullScreenImage}
+        onClose={() => setFullScreenImage(null)}
+      />
     </div>
   );
 };
@@ -1537,13 +1418,24 @@ export default function App() {
   };
 
   const handleSaveTrip = async (newTrip: Trip) => {
-    await storageService.saveTrip(newTrip);
-    await loadTrips();
-    if(view === 'EDIT_TRIP') {
-      setSelectedTrip(newTrip);
-      setView('TRIP_DETAILS');
-    } else {
-      setView('DASHBOARD');
+    try {
+      await storageService.saveTrip(newTrip);
+      await loadTrips();
+      if(view === 'EDIT_TRIP') {
+        setSelectedTrip(newTrip);
+        setView('TRIP_DETAILS');
+      } else {
+        setView('DASHBOARD');
+      }
+    } catch (error: any) {
+      console.error("Erro ao salvar:", error);
+      let msg = "Erro ao salvar viagem.";
+      if (error.code === 'permission-denied') {
+        msg = "Permissão negada. Verifique as Regras de Segurança no Firebase Console.";
+      } else if (error.message && error.message.includes("undefined")) {
+        msg = "Erro de dados inválidos (campo indefinido).";
+      }
+      alert(msg);
     }
   };
 
