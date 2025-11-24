@@ -1235,9 +1235,15 @@ const TripDetailView = ({
                                                  <span className="text-xs font-bold text-slate-400 block mb-0.5">{activity.time}</span>
                                                  <h5 className="font-bold text-slate-800">{activity.title}</h5>
                                                  {activity.location && (
-                                                     <p className="text-slate-500 text-sm flex items-center mt-1">
+                                                     <a 
+                                                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`}
+                                                         target="_blank"
+                                                         rel="noopener noreferrer"
+                                                         onClick={(e) => e.stopPropagation()}
+                                                         className="text-slate-500 text-sm flex items-center mt-1 hover:text-blue-600 hover:underline z-20 relative"
+                                                     >
                                                          <MapPin size={12} className="mr-1" /> {activity.location}
-                                                     </p>
+                                                     </a>
                                                  )}
                                              </div>
                                          </div>
