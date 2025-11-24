@@ -170,7 +170,7 @@ const LoginView = ({
             isLoading={loading} 
             className="w-full py-3.5 shadow-lg shadow-blue-100"
           >
-            Entrar
+            {loading ? 'Entrando...' : 'Entrar / Cadastrar'}
           </Button>
         </form>
 
@@ -707,7 +707,7 @@ const ActivityModal = ({
               type="file" 
               ref={fileInputRef} 
               className="hidden" 
-              accept="image/*,.pdf" 
+              accept="image/*" 
               onChange={handleFileChange}
             />
           </div>
@@ -1321,7 +1321,7 @@ const TripDetailView = ({
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-medium text-slate-300">
                 <span>Orçamento: {formatMoney(trip.budgetBRL)}</span>
-                <span className={`${percentUsed > 100 ? 'text-red-300' : 'text-green-300'}`}>
+                <span className="text-slate-300">
                   {percentUsed.toFixed(1)}% utilizado
                 </span>
               </div>
@@ -1475,13 +1475,28 @@ export default function App() {
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
 
   useEffect(() => {
-    const currentUser = storageService.getUser();
-    if (currentUser) {
-      setUser(currentUser);
-      loadTrips();
-      setView('DASHBOARD');
-    }
-    setLoading(false);
+    // Inicia o observador de autenticação do Firebase
+    // Isso garante que se o usuário der refresh, ele continua logado
+    const unsubscribe = storageService.observeAuth(async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        // Só carrega as viagens se tiver usuário
+        try {
+          const data = await storageService.getTrips();
+          setTrips(data);
+        } catch (error) {
+          console.error("Erro ao carregar viagens:", error);
+        }
+        setView('DASHBOARD');
+      } else {
+        setUser(null);
+        setView('LOGIN');
+      }
+      setLoading(false);
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
   }, []);
 
   const loadTrips = async () => {
@@ -1492,14 +1507,11 @@ export default function App() {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const u = await storageService.mockLogin();
-      setUser(u);
-      await loadTrips();
-      setView('DASHBOARD');
+      await storageService.mockLogin();
+      // Não precisamos setar view ou user aqui, o useEffect do observeAuth vai lidar com isso
     } catch (error) {
       console.error("Login failed", error);
-      alert("Falha no login com Google (Modo Teste)");
-    } finally {
+      alert("Falha no login com Google");
       setLoading(false);
     }
   };
@@ -1507,22 +1519,21 @@ export default function App() {
   const handleEmailLogin = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      const u = await storageService.mockEmailLogin(email, pass);
-      setUser(u);
-      await loadTrips();
-      setView('DASHBOARD');
-    } catch (error) {
+      await storageService.mockEmailLogin(email, pass);
+      // O listener cuidará do resto
+    } catch (error: any) {
       console.error("Email Login failed", error);
-      alert("Falha no login. Tente novamente.");
-    } finally {
+      let msg = "Falha no login.";
+      if (error.code === 'auth/wrong-password') msg = "Senha incorreta.";
+      if (error.code === 'auth/invalid-email') msg = "E-mail inválido.";
+      alert(msg);
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
     await storageService.logout();
-    setUser(null);
-    setView('LOGIN');
+    // O listener cuidará de limpar o estado
   };
 
   const handleSaveTrip = async (newTrip: Trip) => {
@@ -1537,9 +1548,12 @@ export default function App() {
   };
 
   const handleUpdateTrip = async (updatedTrip: Trip) => {
+    // Atualização otimista da UI para parecer instantâneo
+    setSelectedTrip(updatedTrip);
+    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    
+    // Atualização real no banco
     await storageService.saveTrip(updatedTrip);
-    setSelectedTrip(updatedTrip); 
-    await loadTrips(); 
   };
 
   const handleDeleteTrip = async (tripId: string) => {
@@ -1547,6 +1561,14 @@ export default function App() {
     await loadTrips();
     setView('DASHBOARD');
   };
+
+  if (loading) {
+     return (
+       <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+       </div>
+     );
+  }
 
   if (view === 'LOGIN') {
     return <LoginView onGoogleLogin={handleLogin} onEmailLogin={handleEmailLogin} loading={loading} />;
