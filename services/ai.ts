@@ -1,14 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Trip, ActivityType } from '../types';
-import { v4 as uuidv4 } from 'uuid'; // Note: In a real env without uuid lib, we use a helper. Since I can't add deps, I'll use a helper below.
-
-const generateId = () => Math.random().toString(36).substr(2, 9);
+import { v4 as uuidv4 } from 'uuid';
 
 export const generateItinerary = async (destination: string, days: number, budget: string, interests: string): Promise<Trip> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key missing");
-  }
-
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Prompt logic
@@ -64,24 +58,24 @@ export const generateItinerary = async (destination: string, days: number, budge
 
   const data = JSON.parse(text);
 
-  // Hydrate with IDs since AI doesn't generate UUIDs reliably
   const trip: Trip = {
-    id: generateId(),
+    id: uuidv4(),
     destination: data.destination,
-    cities: [data.destination], // Default to destination
+    cities: [data.destination], 
     startDate: data.startDate,
     endDate: data.days[data.days.length - 1].date,
-    budgetBRL: 0, // Placeholder
-    currencies: [{ code: 'USD', rateToBRL: 5.5 }], // Default currency
+    budgetBRL: 0, 
+    currencies: [{ code: 'USD', rateToBRL: 5.5 }],
     expenses: [],
     documents: [],
     notes: `Generated itinerary for ${destination} (${budget} budget). Interests: ${interests}`,
+    coverImage: undefined,
     days: data.days.map((d: any) => ({
       ...d,
-      id: generateId(),
+      id: uuidv4(),
       activities: d.activities.map((a: any) => ({
         ...a,
-        id: generateId()
+        id: uuidv4()
       }))
     }))
   };
